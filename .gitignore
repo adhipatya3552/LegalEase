@@ -1,0 +1,23 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local environment variables containing secret keys
+.env
+
+# SQLite local database storing case brief logs
+legalease.db
+
+# Generated legal notice document files
+notice_*.docx
+
+# OS specific files
+.DS_Store
+Thumbs.db

@@ -2,7 +2,7 @@ import os
 from agent import classify_and_draft_notice
 from document_generator import create_legal_notice_doc
 from uipath_connector import create_case_in_maestro
-from app import init_db, save_case, get_case_by_id
+from database import init_db, save_case, get_case_by_id
 
 def run_tests():
     print("Initializing test database...")

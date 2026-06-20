@@ -74,7 +74,44 @@ Copy `.env.example` to `.env` and fill in your keys:
 GROQ_API_KEY=gsk_your_groq_key_here
 GMAIL_ADDRESS=your_gmail@gmail.com
 GMAIL_APP_PASSWORD=your_16_character_app_password
+
+# Optional: UiPath Integration Configuration
+UIPATH_ORG=your_org_name
+UIPATH_TENANT=your_tenant_name
+UIPATH_ACCESS_TOKEN=your_access_token
 ```
+
+#### 🔑 How to Obtain the Integration Keys:
+
+##### A. Groq API Key
+1. Go to the [Groq Developer Console](https://console.groq.com/).
+2. Log in or create a free account.
+3. Click on **API Keys** in the left sidebar.
+4. Click **Create API Key**, name it `LegalEase`, and copy the generated key (`gsk_...`).
+
+##### B. Gmail App Password (for automated email dispatch)
+1. Go to your [Google Account Settings](https://myaccount.google.com/).
+2. Select **Security** from the left-hand menu.
+3. Under "How you sign in to Google", ensure **2-Step Verification** is turned ON.
+4. Click on **2-Step Verification**, scroll to the very bottom, and select **App passwords**.
+5. Give the app a name (e.g., `LegalEase Notice App`) and click **Create**.
+6. Copy the displayed 16-character code (e.g., `abcd efgh ijkl mnop`). Paste it as `GMAIL_APP_PASSWORD` in your `.env` (remove any spaces).
+
+##### C. UiPath Integration Credentials
+1. **Find `UIPATH_ORG`**: Log in to [UiPath Automation Cloud](https://cloud.uipath.com). Look at your browser URL: `https://cloud.uipath.com/YOUR_ORGANIZATION_NAME/...`. Your organization name is your `UIPATH_ORG` (e.g., `legaleaseorg`).
+2. **Find `UIPATH_TENANT`**: Go to **Admin** > **Tenants** in the sidebar. Copy your tenant name (usually `DefaultTenant`).
+3. **Generate `UIPATH_ACCESS_TOKEN`**:
+   * Navigate to **Admin** > **External Applications** (left sidebar).
+   * Click **Add Application** and choose **Confidential Application** as the application type.
+   * Click **Add Scopes**, select the **Orchestrator** resource, click the **Application Scope(s)** tab, and tick **Select all** (or check `OR.Execution`, `OR.Folders`, `OR.Jobs`, and `OR.Queues`).
+   * Click **Save** to create the application and immediately copy the **App ID (Client ID)** and **App Secret**.
+   * Run the helper script in your terminal to fetch the access token automatically:
+     ```bash
+     python get_token.py
+     ```
+   * Choose option `2`, paste your App ID and App Secret when prompted, and the script will automatically write the token into your `.env` file.
+
+---
 
 ### 4. Run the Local Test Suite
 To verify the database, AI engine, and document generation, execute:

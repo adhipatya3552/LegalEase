@@ -10,6 +10,8 @@
 
 **A co-founder quality legal tech portal enabling everyday citizens and SMBs in India to draft, review, edit, and dispatch legally binding notices for free — synchronized with UiPath Maestro.**
 
+🚀 **[Live App Link on Streamlit Cloud](https://legalease-adhipatya.streamlit.app/)**
+
 </div>
 
 ---
@@ -255,10 +257,13 @@ Verifying case retrieval...
 
 ## 🌐 Deployment
 
-For deploying the dashboard publicly, **Streamlit Community Cloud** is recommended:
+LegalEase is fully deployed and accessible live:
+🚀 **[legalease-adhipatya.streamlit.app](https://legalease-adhipatya.streamlit.app/)**
+
+For custom deployment on **Streamlit Community Cloud**:
 1. Push your code to your GitHub repository.
 2. Log in to [share.streamlit.io](https://share.streamlit.io) via GitHub.
-3. Click **Create App** and connect the `LegalEase` repository.
+3. Click **Create App** and connect your `LegalEase` repository.
 4. Open **Advanced Settings** and paste the contents of your `.env` file directly into the **Secrets** box.
 5. Click **Deploy**. Your site will compile and be online instantly.
 

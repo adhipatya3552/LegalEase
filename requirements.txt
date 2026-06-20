@@ -3,5 +3,4 @@ groq
 python-docx
 requests
 pandas
-python-dotenv
-uipath-api
+python-dotenv

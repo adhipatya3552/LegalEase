@@ -56,8 +56,8 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
         return {
             "status": "mock",
             "case_id": case_id,
-            "message": "Orchestrated in sandbox (no credentials set)",
-            "uipath_link": "https://cloud.uipath.com/mock-tenant/maestro/cases"
+            "message": "Queued in sandbox (no credentials)",
+            "uipath_link": "https://cloud.uipath.com/mock-tenant/orchestrator_/queues"
         }
 
     headers = {
@@ -65,25 +65,55 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
         "Content-Type": "application/json"
     }
 
-    payload = {
-        "title": f"LegalEase — {issue_type} | {case_id}",
-        "description": problem,
-        "customData": {
-            "caseId": case_id,
-            "issueType": issue_type
-        }
-    }
-
     try:
-        response = requests.post(
-            f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/maestro_/api/Case/Create",
-            headers=headers,
-            json=payload
-        )
+        # Step 1: Retrieve folder ID dynamically, with fallback
+        folders_url = f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/orchestrator_/odata/Folders"
+        r_folders = requests.get(folders_url, headers=headers, timeout=10)
+        
+        if r_folders.status_code == 401:
+            return {
+                "status": "error",
+                "message": "HTTP 401: Unauthorized. Please run 'python get_token.py' to refresh your token."
+            }
+            
+        folder_id = None
+        if r_folders.status_code == 200:
+            folders = r_folders.json().get("value", [])
+            for f in folders:
+                if f.get("FullyQualifiedName") == "Shared" or f.get("Name") == "Shared":
+                    folder_id = f.get("Id")
+                    break
+            if not folder_id and folders:
+                folder_id = folders[0].get("Id")
+                
+        # Use user's actual folder ID from screenshot if dynamic retrieval failed
+        if not folder_id:
+            folder_id = 7967241
+            
+        headers["X-UIPATH-OrganizationUnitId"] = str(folder_id)
+
+        # Step 2: Post Case details to Orchestrator Queue "LegalEaseQueue"
+        queue_url = f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/orchestrator_/odata/Queues/UiPathODataSvc.AddQueueItem"
+        payload = {
+            "itemData": {
+                "Name": "LegalEaseQueue",
+                "Priority": "Normal",
+                "SpecificContent": {
+                    "CaseId": case_id,
+                    "IssueType": issue_type,
+                    "ProblemDescription": problem
+                }
+            }
+        }
+
+        response = requests.post(queue_url, headers=headers, json=payload, timeout=15)
+        
         if response.status_code in (200, 201):
-            res_json = response.json()
-            res_json["status"] = "created"
-            return res_json
+            return {
+                "status": "created",
+                "message": "Queued in Orchestrator",
+                "uipath_link": f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/orchestrator_/queues"
+            }
         else:
             err_text = response.text
             if "<html>" in err_text.lower():
@@ -94,7 +124,6 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
                 else:
                     err_text = "HTML Error Response"
             else:
-                # Limit message size
                 err_text = err_text[:120] + ("..." if len(err_text) > 120 else "")
                 
             return {
@@ -102,4 +131,4 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
                 "message": f"HTTP {response.status_code}: {err_text}"
             }
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Exception: {str(e)}"}

@@ -1,6 +1,7 @@
 import streamlit as st
 import uuid
 import os
+import sqlite3
 from dotenv import load_dotenv
 from agent import classify_and_draft_notice
 from document_generator import create_legal_notice_doc
@@ -175,7 +176,7 @@ if page == "📝 File New Case":
         )
         extra_details = st.text_input("Additional specific facts (e.g. Claim amount, Contract Date, Cheque details, Invoice number)", placeholder="e.g. Invoice No. INV-90812; Product value ₹54,990; Cheque bounce date 12-05-2026")
 
-    if st.button("🚀 Draft Legal Notice & Sync Case", use_container_width=True):
+    if st.button("🚀 Draft Legal Notice & Sync Case", width='stretch'):
         if not all([sender_name, sender_email, recipient_name, recipient_email, problem]):
             st.error("⚠️ All core fields (Sender Name/Email, Opponent Name/Email, and Dispute Description) are mandatory!")
         else:
@@ -225,6 +226,7 @@ if page == "📝 File New Case":
                 st.session_state.recipient_email = recipient_email
                 st.session_state.uipath_msg = uipath_response.get("message", "Logged")
                 st.session_state.uipath_status = uipath_response.get("status", "Created")
+                st.session_state.notice_warnings = result.get("warnings", [])
                 
                 st.success(f"🎉 Case Registered! Case ID: {case_id}")
                 st.rerun()
@@ -237,13 +239,24 @@ if page == "📝 File New Case":
         col_m1, col_m2 = st.columns(2)
         col_m1.metric("Dispute Category Detected", st.session_state.issue_type)
         col_m2.metric("UiPath Sync Action", st.session_state.uipath_msg)
-        
+
+        # Human Review safety banner — flags possible AI citation/wording issues
+        # so the reviewer knows exactly what to double-check before sending.
+        notice_warnings = st.session_state.get("notice_warnings", [])
+        if notice_warnings:
+            st.warning(
+                "⚠️ **Human Review Required** — the AI draft below may need correction:\n\n"
+                + "\n\n".join(f"- {w}" for w in notice_warnings)
+            )
+        else:
+            st.info("✅ No known citation issues detected automatically. Please still review the draft carefully before sending — this is not a substitute for legal advice.")
+
         # Interactive Text Editor
         notice_edited = st.text_area("Edit Drafted Notice (Make modifications directly below):", value=st.session_state.notice_draft, height=420)
         
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            if st.button("💾 Save Edits & Rebuild Notice File", use_container_width=True):
+            if st.button("💾 Save Edits & Rebuild Notice File", width='stretch'):
                 # Update SQLite
                 conn = sqlite3.connect("legalease.db")
                 c = conn.cursor()
@@ -267,7 +280,7 @@ if page == "📝 File New Case":
         col_act1, col_act2 = st.columns(2)
         
         with col_act1:
-            if st.button("📤 Send Notice via Email", use_container_width=True):
+            if st.button("📤 Send Notice via Email", width='stretch'):
                 with st.spinner("Dispatching notice with attached Word document to opponent..."):
                     sent = send_legal_notice(
                         st.session_state.recipient_email,
@@ -288,7 +301,7 @@ if page == "📝 File New Case":
                     data=f,
                     file_name=f"LegalNotice_{st.session_state.current_case_id}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True
+                    width='stretch'
                 )
 
 # ══════════════════════════════════════════════════════════════
@@ -386,7 +399,7 @@ elif page == "📊 Case Tracker & Manager":
                 col_act1, col_act2, col_act3 = st.columns(3)
                 
                 with col_act1:
-                    if st.button("📧 Send/Resend Email Notice", key=f"re_email_{case['case_id']}", use_container_width=True):
+                    if st.button("📧 Send/Resend Email Notice", key=f"re_email_{case['case_id']}", width='stretch'):
                         doc_path = f"notice_{case['case_id']}.docx"
                         if not os.path.exists(doc_path):
                             create_legal_notice_doc(case['notice_draft'], case['case_id'], case['issue_type'])
@@ -412,7 +425,7 @@ elif page == "📊 Case Tracker & Manager":
                             file_name=f"LegalNotice_{case['case_id']}.docx",
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                             key=f"dl_dashboard_{case['case_id']}",
-                            use_container_width=True
+                            width='stretch'
                         )
                         
                 with col_act3:
@@ -436,4 +449,4 @@ elif page == "📊 Case Tracker & Manager":
 
         st.divider()
         st.markdown("### 📋 Complete Registry Log")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')

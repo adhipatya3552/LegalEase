@@ -3,6 +3,7 @@ import sqlite3
 from groq import Groq
 from dotenv import load_dotenv
 from datetime import datetime
+from legal_reference import get_legal_reference_block, is_known_category
 
 load_dotenv()
 
@@ -32,7 +33,8 @@ def classify_and_draft_notice(
     api_key = get_groq_api_key()
     client = Groq(api_key=api_key)
 
-    
+    legal_reference = get_legal_reference_block()
+
     prompt = f"""
 You are a senior Indian legal expert with 20 years of experience drafting legal notices for the Supreme Court and High Courts of India.
 A client has approached you with a legal dispute and wants to send a formal legal notice.
@@ -59,17 +61,16 @@ Your tasks:
 
 2. Draft a formal, legally binding legal notice under the relevant laws of India.
    The notice MUST be drafted in a professional, firm, and formal legal tone.
-   You must cite specific Indian Acts and Sections with extreme accuracy. Citing incorrect section numbers will invalidate the document. Match your citations to the specific dispute context as follows:
-   - Product Defects (Physical Goods like faulty screens, bad appliances, TV failures): Cite Section 2(10) of the Consumer Protection Act, 2019 (defines "defect" in goods).
-   - Deficiency of Service (Refusal to honor warranty, poor repairs, customer service failures, delays): Cite Section 2(11) of the Consumer Protection Act, 2019 (defines "deficiency" in services).
-   - Right to Safety (Protection against marketing of hazardous goods/services): Cite Section 2(9)(i) of the Consumer Protection Act, 2019 (defines "consumer rights" including safety).
-   - Non-Payment of Dues / General Contract Breach: Cite Section 73 of the Indian Contract Act, 1872.
-   - Cheque Bouncing: Cite Section 138 of the Negotiable Instruments Act, 1881.
-   - Property / Tenancy Disputes (Withholding of security deposits, lease termination): Cite Section 106 of the Transfer of Property Act, 1882.
-   - Harassment / Defamation: Appropriate sections under the Indian Penal Code (IPC) / Bharatiya Nyaya Sanhita (BNS).
 
-   CRITICAL LEGAL RULE: Under the Consumer Protection Act, 2019, Section 12 relates only to administrative vacancies and must NEVER be cited as a consumer right or safety provision. Always use Section 2(9)(i) for consumer rights, Section 2(10) for product defects, and Section 2(11) for service deficiencies.
+   You must cite specific Indian Acts and Sections with extreme accuracy. Below is a
+   VERIFIED REFERENCE TABLE. You are ONLY permitted to cite a section number if it
+   appears in this table for the matching issue type. Do not cite any section number
+   that is not listed below, even if you believe it might be correct — if unsure,
+   describe the legal wrong in plain factual language instead of guessing a citation.
 
+   --- VERIFIED LEGAL REFERENCE TABLE (FOLLOW STRICTLY) ---
+{legal_reference}
+   --- END OF REFERENCE TABLE ---
 
    The structure of the notice must be:
    - Heading: "LEGAL NOTICE" (Centered)
@@ -136,8 +137,63 @@ LEGAL_NOTICE:
         notice_text = re.sub(r'^```[a-zA-Z]*\n', '', notice_text)
         notice_text = re.sub(r'\n```$', '', notice_text)
 
+    notice_text = notice_text.strip()
+
+    # Safety-net validation: catch known hallucination patterns even if the
+    # prompt rules were not followed perfectly. This does NOT block sending —
+    # it flags warnings so the Human Review stage knows to look closer.
+    warnings = validate_legal_notice(notice_text, issue_type)
+
     return {
         "issue_type": issue_type,
-        "notice_text": notice_text.strip()
+        "notice_text": notice_text,
+        "warnings": warnings
     }
+
+
+def validate_legal_notice(notice_text: str, issue_type: str = "") -> list:
+    """
+    Lightweight safety-net check for known hallucination patterns.
+    This is NOT a substitute for human/lawyer review — it only catches a
+    small set of specific, known mistakes so they can be flagged before
+    a notice is sent. Returns a list of warning strings (empty if none found).
+    """
+    warnings = []
+    text_lower = notice_text.lower()
+
+    # Out-of-database check: if the AI's classified issue type does not match
+    # any category in our verified legal_reference.py table, its citations
+    # were NOT restricted to a verified source — flag this clearly so the
+    # human reviewer knows to double check every section number by hand.
+    if not is_known_category(issue_type):
+        warnings.append(
+            f"This case was classified as '{issue_type}', which is OUTSIDE our verified "
+            "legal reference database (legal_reference.py covers Consumer Disputes, "
+            "Contract Breach, Cheque Bounce, Property/Tenancy, and Harassment/Defamation "
+            "only). Any law or section number cited in this draft was NOT checked against "
+            "a verified source. Please manually verify every citation before sending, or "
+            "consult a lawyer for this specific case type."
+        )
+
+    # Known incorrect citation: Section 12 is an administrative provision,
+    # not a consumer-rights provision. Flag if it appears near "consumer".
+    if "section 12" in text_lower and "consumer" in text_lower:
+        warnings.append(
+            "Possible incorrect citation: 'Section 12' was mentioned. Section 12 of "
+            "the Consumer Protection Act, 2019 is an administrative provision, not a "
+            "consumer rights provision. Verify this citation before sending."
+        )
+
+    # Criminal action threatened in what is likely a civil/consumer matter
+    if "criminal action" in text_lower or "criminal proceedings" in text_lower:
+        if "138" not in notice_text:  # Section 138 (cheque bounce) genuinely has criminal consequences
+            warnings.append(
+                "This notice threatens 'criminal action'. Most consumer/contract disputes "
+                "are civil matters only. Verify this is appropriate before sending, or "
+                "change it to reference civil remedies (Consumer Forum / District Court)."
+            )
+
+    if not warnings:
+        return []
+    return warnings
 

@@ -135,7 +135,7 @@ st.markdown("""
 
 # ── Sidebar ──────────────────────────────────────────────────
 st.sidebar.image("https://img.icons8.com/fluency/96/scales.png", width=80)
-st.sidebar.title("⚖️ LegalEase Control")
+st.sidebar.title("⚖️ LegalEase")
 st.sidebar.markdown("*Empowering individuals and SMBs with automated, affordable legal protections under Indian Law.*")
 st.sidebar.divider()
 page = st.sidebar.radio("Navigate Navigation", ["📝 File New Case", "📊 Case Tracker & Manager"])

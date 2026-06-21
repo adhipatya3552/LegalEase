@@ -48,6 +48,55 @@ def get_uipath_credentials() -> dict:
         "access_token": access_token.strip()
     }
 
+def refresh_uipath_token() -> str:
+    client_id = os.getenv("UIPATH_CLIENT_ID", "")
+    client_secret = os.getenv("UIPATH_CLIENT_SECRET", "")
+    
+    if not client_id or not client_secret:
+        return ""
+        
+    url = "https://cloud.uipath.com/identity_/connect/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret
+    }
+    try:
+        response = requests.post(url, headers=headers, data=data, timeout=10)
+        if response.status_code == 200:
+            token = response.json().get("access_token", "")
+            if token:
+                # Update .env file dynamically
+                env_path = ".env"
+                if os.path.exists(env_path):
+                    with open(env_path, "r") as f:
+                        content = f.read()
+                    import re
+                    if "UIPATH_ACCESS_TOKEN=" in content:
+                        new_content = re.sub(r"UIPATH_ACCESS_TOKEN=.*", f"UIPATH_ACCESS_TOKEN={token}", content)
+                    else:
+                        new_content = content.rstrip() + f"\nUIPATH_ACCESS_TOKEN={token}\n"
+                    with open(env_path, "w") as f:
+                        f.write(new_content)
+                
+                # Also save to SQLite settings
+                try:
+                    conn = sqlite3.connect("legalease.db")
+                    c = conn.cursor()
+                    c.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('uipath_access_token', ?)", (token,))
+                    conn.commit()
+                    conn.close()
+                except Exception:
+                    pass
+                
+                # Update environment variables for the current process
+                os.environ["UIPATH_ACCESS_TOKEN"] = token
+                return token
+    except Exception:
+        pass
+    return ""
+
 def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
     creds = get_uipath_credentials()
     
@@ -70,11 +119,17 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
         folders_url = f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/orchestrator_/odata/Folders"
         r_folders = requests.get(folders_url, headers=headers, timeout=10)
         
+        # If dynamic folder fetch fails with 401, refresh token and retry
         if r_folders.status_code == 401:
-            return {
-                "status": "error",
-                "message": "HTTP 401: Unauthorized. Please run 'python get_token.py' to refresh your token."
-            }
+            new_token = refresh_uipath_token()
+            if new_token:
+                headers["Authorization"] = f"Bearer {new_token}"
+                r_folders = requests.get(folders_url, headers=headers, timeout=10)
+            else:
+                return {
+                    "status": "error",
+                    "message": "HTTP 401: Unauthorized. Please check your credentials."
+                }
             
         folder_id = None
         if r_folders.status_code == 200:
@@ -107,6 +162,13 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
         }
 
         response = requests.post(queue_url, headers=headers, json=payload, timeout=15)
+        
+        # If queue item post fails with 401, refresh token and retry
+        if response.status_code == 401:
+            new_token = refresh_uipath_token()
+            if new_token:
+                headers["Authorization"] = f"Bearer {new_token}"
+                response = requests.post(queue_url, headers=headers, json=payload, timeout=15)
         
         if response.status_code in (200, 201):
             return {

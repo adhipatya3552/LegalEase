@@ -19,6 +19,7 @@
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
+- [UiPath Agent Architecture & Details](#-uipath-agent-architecture--details)
 - [Features](#-features)
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
@@ -38,6 +39,19 @@
 **LegalEase** democratizes access to justice in India by enabling users to describe their grievances in plain, everyday language. The platform automatically classifies the issue and drafts a formal, legally binding notice citing exact sections of Indian Acts (such as the *Consumer Protection Act 2019*, *Indian Contract Act 1872*, *Negotiable Instruments Act 1881*, and *Transfer of Property Act 1882*). 
 
 The notice lifecycle is synchronized with **UiPath Maestro Case Management (Track 1)** to coordinate backend automation, case tracking, human-in-the-loop validation, and resolution.
+
+---
+
+## 🤖 UiPath Agent Architecture & Details
+
+### 🧩 UiPath Components Used
+* **UiPath Maestro (Case Management - Track 1):** Coordinates case tracking, status transitions, human-in-the-loop audits, and resolution validation.
+* **UiPath Orchestrator API (Maestro Sync):** Integrates via REST APIs to dynamically publish new cases and metadata into the Orchestrator.
+* **UiPath Confidential Application (OAuth2):** Handles secure server-to-server authentication with tenant scope access credentials.
+* **Maestro Case API Workflows:** Automates backend queue entries and case folder logging.
+
+### 🏷️ Agent Type
+* **Coded Agents:** This solution utilizes a **Coded Agent** pattern built entirely in Python. The AI legal agent connects to the Groq API (LLaMA-3.3-70B model) to dynamically classify disputes and draft legal compliance notices, which are directly synchronized programmatically with UiPath Orchestrator using RESTful OAuth2 integrations.
 
 ---
 

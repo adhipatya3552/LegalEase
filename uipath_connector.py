@@ -111,42 +111,11 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
 
     headers = {
         "Authorization": f"Bearer {creds['access_token']}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-UIPATH-OrganizationUnitId": "7967241" # Bypasses folder lookup API to run 2x faster
     }
 
     try:
-        # Step 1: Retrieve folder ID dynamically, with fallback
-        folders_url = f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/orchestrator_/odata/Folders"
-        r_folders = requests.get(folders_url, headers=headers, timeout=10)
-        
-        # If dynamic folder fetch fails with 401, refresh token and retry
-        if r_folders.status_code == 401:
-            new_token = refresh_uipath_token()
-            if new_token:
-                headers["Authorization"] = f"Bearer {new_token}"
-                r_folders = requests.get(folders_url, headers=headers, timeout=10)
-            else:
-                return {
-                    "status": "error",
-                    "message": "HTTP 401: Unauthorized. Please check your credentials."
-                }
-            
-        folder_id = None
-        if r_folders.status_code == 200:
-            folders = r_folders.json().get("value", [])
-            for f in folders:
-                if f.get("FullyQualifiedName") == "Shared" or f.get("Name") == "Shared":
-                    folder_id = f.get("Id")
-                    break
-            if not folder_id and folders:
-                folder_id = folders[0].get("Id")
-                
-        # Use user's actual folder ID from screenshot if dynamic retrieval failed
-        if not folder_id:
-            folder_id = 7967241
-            
-        headers["X-UIPATH-OrganizationUnitId"] = str(folder_id)
-
         # Step 2: Post Case details to Orchestrator Queue "LegalEaseQueue"
         queue_url = f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/orchestrator_/odata/Queues/UiPathODataSvc.AddQueueItem"
         payload = {
@@ -161,14 +130,14 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
             }
         }
 
-        response = requests.post(queue_url, headers=headers, json=payload, timeout=15)
+        response = requests.post(queue_url, headers=headers, json=payload, timeout=10)
         
         # If queue item post fails with 401, refresh token and retry
         if response.status_code == 401:
             new_token = refresh_uipath_token()
             if new_token:
                 headers["Authorization"] = f"Bearer {new_token}"
-                response = requests.post(queue_url, headers=headers, json=payload, timeout=15)
+                response = requests.post(queue_url, headers=headers, json=payload, timeout=10)
         
         if response.status_code in (200, 201):
             return {

@@ -226,6 +226,8 @@ Open **`http://localhost:8501`** in your browser to experience the LegalEase por
      ```
    * Choose option `2`, paste your App ID and App Secret when prompted, and the script will automatically write the token into your `.env` file.
 
+   > ⚠️ **Note on Token Expiration**: UiPath access tokens expire every **1 hour**. If you encounter authentication or connection errors when running the app later, simply re-run `python get_token.py` to quickly refresh your token.
+
 ---
 
 ## ⚙️ How It Works

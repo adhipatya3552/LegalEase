@@ -18,13 +18,13 @@
 
 ## 📋 Table of Contents
 
-- [Overview](#-overview)
+- [Project Description (Overview)](#-project-description-overview)
 - [UiPath Agent Architecture & Details](#-uipath-agent-architecture--details)
 - [Features](#-features)
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
+- [Setup Instructions (Getting Started)](#-setup-instructions-getting-started)
 - [Environment Variables](#-environment-variables)
 - [How to Obtain Keys](#-how-to-obtain-keys)
 - [How It Works](#-how-it-works)
@@ -34,7 +34,7 @@
 
 ---
 
-## ⚖️ Overview
+## ⚖️ Project Description (Overview)
 
 **LegalEase** democratizes access to justice in India by enabling users to describe their grievances in plain, everyday language. The platform automatically classifies the issue and drafts a formal, legally binding notice citing exact sections of Indian Acts (such as the *Consumer Protection Act 2019*, *Indian Contract Act 1872*, *Negotiable Instruments Act 1881*, and *Transfer of Property Act 1882*). 
 
@@ -144,7 +144,7 @@ legalease/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Setup Instructions (Getting Started)
 
 ### Prerequisites
 * **Python 3.10+**

@@ -3,14 +3,49 @@ import re
 import os
 
 def main():
+    # Try reading from .env to see if there is UIPATH_ORG
+    org_env = ""
+    env_path = ".env"
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r") as f:
+                for line in f:
+                    if line.startswith("UIPATH_ORG="):
+                        org_env = line.split("=", 1)[1].strip()
+                        break
+        except Exception:
+            pass
+
     print("=== UiPath Access Token Generator ===")
-    print("Which authentication method are you using?")
+    print("Which UiPath environment are you targeting?")
+    
+    if org_env:
+        if "hackathon" in org_env.lower() or "staging" in org_env.lower():
+            env_default = "1"
+            print(f"1) Staging / UiPath Labs (staging.uipath.com) [Recommended based on .env org: {org_env}]")
+            print("2) Production Automation Cloud (cloud.uipath.com)")
+        else:
+            env_default = "2"
+            print("1) Staging / UiPath Labs (staging.uipath.com)")
+            print(f"2) Production Automation Cloud (cloud.uipath.com) [Recommended based on .env org: {org_env}]")
+    else:
+        env_default = "1"
+        print("1) Staging / UiPath Labs (staging.uipath.com) [Default for Hackathon]")
+        print("2) Production Automation Cloud (cloud.uipath.com)")
+
+    env_choice = input(f"Select environment (1 or 2, default {env_default}): ").strip()
+    if not env_choice:
+        env_choice = env_default
+
+    base_url = "https://staging.uipath.com" if env_choice == "1" else "https://cloud.uipath.com"
+    url = f"{base_url}/identity_/connect/token"
+    
+    print("\nWhich authentication method are you using?")
     print("1) Method A: User Key / Refresh Token (from Tenants -> API Access)")
     print("2) Method B: External Application Client Credentials (from Admin -> External Applications)")
     
     choice = input("Select option (1 or 2): ").strip()
     
-    url = "https://cloud.uipath.com/identity_/connect/token"
     headers = {
         "Content-Type": "application/x-www-form-urlencoded"
     }
@@ -45,7 +80,7 @@ def main():
         }
 
     try:
-        print("\nRequesting access token from UiPath...")
+        print(f"\nRequesting access token from {base_url}...")
         response = requests.post(url, headers=headers, data=data)
         if response.status_code == 200:
             token = response.json().get("access_token")

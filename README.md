@@ -45,13 +45,15 @@ The notice lifecycle is synchronized with **UiPath Maestro Case Management (Trac
 ## 🤖 UiPath Agent Architecture & Details
 
 ### 🧩 UiPath Components Used
+* **UiPath Labs Staging Environment:** Deployed and built inside the hackathon staging tenant: **[https://staging.uipath.com/hackathon26_729/](https://staging.uipath.com/hackathon26_729/)**.
 * **UiPath Maestro (Case Management - Track 1):** Coordinates case tracking, status transitions, human-in-the-loop audits, and resolution validation.
-* **UiPath Orchestrator API (Maestro Sync):** Integrates via REST APIs to dynamically publish new cases and metadata into the Orchestrator.
-* **UiPath Confidential Application (OAuth2):** Handles secure server-to-server authentication with tenant scope access credentials.
+* **UiPath Orchestrator API (Maestro Sync):** Integrates via REST APIs to dynamically publish new cases and metadata into the Orchestrator queues.
+* **UiPath Confidential Application (OAuth2):** Handles secure server-to-server authentication with staging/tenant scope access credentials.
 * **Maestro Case API Workflows:** Automates backend queue entries and case folder logging.
 
 ### 🏷️ Agent Type
-* **Coded Agents:** This solution utilizes a **Coded Agent** pattern built entirely in Python. The AI legal agent connects to the Groq API (LLaMA-3.3-70B model) to dynamically classify disputes and draft legal compliance notices, which are directly synchronized programmatically with UiPath Orchestrator using RESTful OAuth2 integrations.
+* **Coded Agents:** This solution utilizes a **Coded Agent** pattern built entirely in Python. The AI legal agent connects to the Groq API (LLaMA-3.3-70B model) to dynamically classify disputes and draft legal compliance notices, which are directly synchronized programmatically with the UiPath Orchestrator queue on **Staging (UiPath Labs)** using RESTful OAuth2 integrations.
+* **Dynamic Environment Routing:** The application dynamically detects if the organization name (`UIPATH_ORG`) is a staging environment (containing `hackathon` or `staging`) and automatically routes all OAuth2 token requests and API requests to `staging.uipath.com`, while defaulting to `cloud.uipath.com` for production tenants.
 
 ---
 
@@ -213,7 +215,9 @@ Open **`http://localhost:8501`** in your browser to experience the LegalEase por
 6. Copy the displayed 16-character code (remove spaces when pasting in `.env`).
 
 ### C. UiPath Integration Credentials
-1. **Find `UIPATH_ORG`**: Log in to [UiPath Automation Cloud](https://cloud.uipath.com). Look at your browser URL: `https://cloud.uipath.com/YOUR_ORGANIZATION_NAME/...`. Your organization name is your `UIPATH_ORG` (e.g., `legaleaseorg`).
+1. **Find `UIPATH_ORG`**:
+   * **For Hackathon Judges / Staging**: Use the Staging portal at **[https://staging.uipath.com](https://staging.uipath.com)**. Look at the URL format: `https://staging.uipath.com/hackathon26_729/`. The organization is **`hackathon26_729`**.
+   * **For Production / Personal Cloud**: Log in to [UiPath Automation Cloud](https://cloud.uipath.com). Look at your browser URL: `https://cloud.uipath.com/YOUR_ORGANIZATION_NAME/...`. Your organization name is your `UIPATH_ORG` (e.g., `legaleaseorg`).
 2. **Find `UIPATH_TENANT`**: Go to **Admin** > **Tenants** in the sidebar. Copy your tenant name (usually `DefaultTenant`).
 3. **Generate `UIPATH_ACCESS_TOKEN`**:
    * Navigate to **Admin** > **External Applications** (left sidebar).
@@ -224,9 +228,9 @@ Open **`http://localhost:8501`** in your browser to experience the LegalEase por
      ```bash
      python get_token.py
      ```
-   * Choose option `2`, paste your App ID and App Secret when prompted, and the script will automatically write the token into your `.env` file.
+   * The script will dynamically detect your target environment (Staging vs. Production) based on the `UIPATH_ORG` set in your `.env` and walk you through generating the token seamlessly. Paste your App ID and App Secret when prompted, and it will update `.env` automatically.
 
-   > ⚠️ **Note on Token Expiration**: UiPath access tokens expire every **1 hour**. If you encounter authentication or connection errors when running the app later, simply re-run `python get_token.py` to quickly refresh your token.
+   > ⚠️ **Note on Token Expiration**: UiPath access tokens expire every **1 hour**. If you encounter authentication or connection errors when running the app later, simply re-run `python get_token.py` to quickly refresh your token. The application also supports automatic runtime renewal if both Client ID and Client Secret are present in `.env`.
 
 ---
 

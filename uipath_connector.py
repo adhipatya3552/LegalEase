@@ -48,6 +48,12 @@ def get_uipath_credentials() -> dict:
         "access_token": access_token.strip()
     }
 
+def get_uipath_base_url(org: str) -> str:
+    # If organization contains 'hackathon' or 'staging', default to staging.uipath.com
+    if org and ("hackathon" in org.lower() or "staging" in org.lower()):
+        return "https://staging.uipath.com"
+    return "https://cloud.uipath.com"
+
 def refresh_uipath_token() -> str:
     client_id = os.getenv("UIPATH_CLIENT_ID", "")
     client_secret = os.getenv("UIPATH_CLIENT_SECRET", "")
@@ -55,7 +61,9 @@ def refresh_uipath_token() -> str:
     if not client_id or not client_secret:
         return ""
         
-    url = "https://cloud.uipath.com/identity_/connect/token"
+    creds = get_uipath_credentials()
+    base_url = get_uipath_base_url(creds.get("org", ""))
+    url = f"{base_url}/identity_/connect/token"
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {
         "grant_type": "client_credentials",
@@ -99,6 +107,7 @@ def refresh_uipath_token() -> str:
 
 def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
     creds = get_uipath_credentials()
+    base_url = get_uipath_base_url(creds.get("org", ""))
     
     if not creds["org"] or not creds["tenant"] or not creds["access_token"]:
         # Return a premium mock response simulating UiPath Orchestration Case flow
@@ -106,7 +115,7 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
             "status": "mock",
             "case_id": case_id,
             "message": "Queued in sandbox (no credentials)",
-            "uipath_link": "https://cloud.uipath.com/mock-tenant/orchestrator_/queues"
+            "uipath_link": f"{base_url}/mock-tenant/orchestrator_/queues"
         }
 
     headers = {
@@ -117,7 +126,7 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
 
     try:
         # Step 2: Post Case details to Orchestrator Queue "LegalEaseQueue"
-        queue_url = f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/orchestrator_/odata/Queues/UiPathODataSvc.AddQueueItem"
+        queue_url = f"{base_url}/{creds['org']}/{creds['tenant']}/orchestrator_/odata/Queues/UiPathODataSvc.AddQueueItem"
         payload = {
             "itemData": {
                 "Name": "LegalEaseQueue",
@@ -143,7 +152,7 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
             return {
                 "status": "created",
                 "message": "Queued in Orchestrator",
-                "uipath_link": f"https://cloud.uipath.com/{creds['org']}/{creds['tenant']}/orchestrator_/queues"
+                "uipath_link": f"{base_url}/{creds['org']}/{creds['tenant']}/orchestrator_/queues"
             }
         else:
             err_text = response.text

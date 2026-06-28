@@ -174,4 +174,4 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
                 "message": f"HTTP {response.status_code}: {err_text}"
             }
     except Exception as e:
-        return {"status": "error", "message": f"Exception: {str(e)}"}
+        return {"status": "error", "message": f"Exception: {str(e)}"}

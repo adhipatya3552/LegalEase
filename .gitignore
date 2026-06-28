@@ -21,6 +21,3 @@ notice_*.docx
 # OS specific files
 .DS_Store
 Thumbs.db
-
-# Credentials and secrets
-*.txt

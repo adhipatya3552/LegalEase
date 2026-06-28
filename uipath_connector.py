@@ -118,10 +118,13 @@ def create_case_in_maestro(case_id: str, issue_type: str, problem: str) -> dict:
             "uipath_link": f"{base_url}/mock-tenant/orchestrator_/queues"
         }
 
+    # Load folder ID from env or fallback (makes it configurable for staging vs production)
+    folder_id = os.getenv("UIPATH_FOLDER_ID", "7967241").strip()
+
     headers = {
         "Authorization": f"Bearer {creds['access_token']}",
         "Content-Type": "application/json",
-        "X-UIPATH-OrganizationUnitId": "7967241" # Bypasses folder lookup API to run 2x faster
+        "X-UIPATH-OrganizationUnitId": folder_id
     }
 
     try:
